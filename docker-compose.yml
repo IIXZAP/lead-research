@@ -1,0 +1,123 @@
+name: lead-research-platform
+
+x-php-image: &php-image
+  build:
+    context: .
+    dockerfile: infrastructure/php/Dockerfile
+  env_file: ./apps/web/.env
+  depends_on:
+    mysql:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  volumes:
+    - ./apps/web:/var/www/html
+  networks:
+    - lead-platform
+
+x-python-image: &python-image
+  build:
+    context: .
+    dockerfile: infrastructure/python/Dockerfile
+  env_file: ./apps/research-agent/.env
+  depends_on:
+    redis:
+      condition: service_healthy
+  volumes:
+    - ./apps/research-agent:/app
+  networks:
+    - lead-platform
+
+services:
+  nginx:
+    build:
+      context: ./infrastructure/nginx
+    ports:
+      - "${APP_PORT:-8080}:80"
+    depends_on:
+      - laravel
+    volumes:
+      - ./apps/web:/var/www/html:ro
+    networks:
+      - lead-platform
+
+  laravel:
+    <<: *php-image
+    container_name: lead-platform-laravel
+
+  laravel-queue:
+    <<: *php-image
+    container_name: lead-platform-laravel-queue
+    command: php artisan queue:work --tries=3 --backoff=5,15,60 --max-time=3600
+
+  laravel-scheduler:
+    <<: *php-image
+    container_name: lead-platform-laravel-scheduler
+    command: php artisan schedule:work
+
+  mysql:
+    image: mysql:8.0
+    container_name: lead-platform-mysql
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-lead_platform}
+      MYSQL_USER: ${DB_USERNAME:-lead_platform}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootsecret}
+    ports:
+      - "${DB_FORWARD_PORT:-3306}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-rootsecret}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - lead-platform
+
+  redis:
+    image: redis:7-alpine
+    container_name: lead-platform-redis
+    ports:
+      - "${REDIS_FORWARD_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - lead-platform
+
+  python-api:
+    <<: *python-image
+    container_name: lead-platform-python-api
+    ports:
+      - "${PYTHON_API_PORT:-8000}:8000"
+
+  celery-worker:
+    <<: *python-image
+    container_name: lead-platform-celery-worker
+    command: celery -A app.core.celery_app worker --loglevel=info --concurrency=4
+    depends_on:
+      redis:
+        condition: service_healthy
+      python-api:
+        condition: service_started
+
+  celery-beat:
+    <<: *python-image
+    container_name: lead-platform-celery-beat
+    command: celery -A app.core.celery_app beat --loglevel=info
+    depends_on:
+      redis:
+        condition: service_healthy
+
+networks:
+  lead-platform:
+    driver: bridge
+
+volumes:
+  mysql-data:
+  redis-data:

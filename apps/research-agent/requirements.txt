@@ -1,0 +1,24 @@
+fastapi==0.139.0
+uvicorn[standard]==0.32.1
+pydantic==2.10.3
+pydantic-settings==2.6.1
+sqlalchemy==2.0.36
+httpx==0.28.1
+beautifulsoup4==4.12.3
+celery==5.4.0
+redis==5.2.1
+python-dotenv==1.2.2
+tenacity==9.0.0
+
+# Optional / opt-in (WEBSITE_AUDIT_USE_PLAYWRIGHT=true only)
+playwright==1.49.1
+
+# Dev / test
+# fastapi>=0.139 pulls in starlette>=1.0, which requires pytest>=9 and
+# pytest-asyncio>=1.4 (0.24.0 pins pytest<9) — bumped together and
+# verified against the full suite, not just individually.
+pytest==9.1.1
+pytest-asyncio==1.4.0
+pytest-httpx==0.36.2
+respx==0.22.0
+fakeredis==2.26.2
