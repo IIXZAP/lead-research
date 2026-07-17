@@ -1,22 +1,50 @@
-# Dependencies
+# Environment
+.env
+**/.env
+!.env.example
+!**/.env.example
+
+# Node
 node_modules/
 **/node_modules/
 
-# Environment files
-.env
-**/.env
-
-# Laravel
+# PHP Composer
 vendor/
 **/vendor/
-storage/logs/*
-bootstrap/cache/*.php
+
+# Laravel cache and runtime
+**/storage/framework/cache/*
+**/storage/framework/sessions/*
+**/storage/framework/views/*
+**/storage/logs/*
+**/bootstrap/cache/*.php
+
+# Keep directory placeholder files
+!**/storage/framework/cache/.gitignore
+!**/storage/framework/sessions/.gitignore
+!**/storage/framework/views/.gitignore
+!**/storage/logs/.gitignore
+!**/bootstrap/cache/.gitignore
+
+# Vite build output
+**/public/build/
 
 # Python
 __pycache__/
+**/__pycache__/
 *.py[cod]
 .venv/
+**/.venv/
 venv/
+**/venv/
+.pytest_cache/
+**/.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Logs
+*.log
 
 # IDE / OS
 .vscode/
