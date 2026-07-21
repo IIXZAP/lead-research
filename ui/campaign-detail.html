@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>รายละเอียด Campaign — Lead Campaign Dashboard</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { darkMode: 'class', theme: { extend: {
+    fontFamily: { sans: ['Inter', 'Noto Sans Thai', 'sans-serif'] },
+    colors: { brand: { 50:'#eef2ff',100:'#e0e7ff',500:'#6366f1',600:'#4f46e5',700:'#4338ca' } }
+  } } };
+</script>
+<link rel="stylesheet" href="assets/css/app.css" />
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+<body data-page="campaign-detail" class="bg-slate-50 text-slate-800">
+
+  <div class="flex min-h-screen">
+    <aside id="sidebar"></aside>
+
+    <div class="flex-1 min-w-0 flex flex-col">
+      <header id="topbar"></header>
+
+      <main id="page-content" class="flex-1 p-4 sm:p-6 space-y-5 max-w-[1600px] w-full mx-auto">
+
+        <!-- Loading skeleton ก่อนโหลดข้อมูล Campaign -->
+        <div id="detail-loading" class="space-y-4">
+          <div class="skeleton h-24 rounded-2xl"></div>
+          <div class="skeleton h-10 w-64 rounded-lg"></div>
+          <div class="skeleton h-64 rounded-2xl"></div>
+        </div>
+
+        <!-- Permission denied / Not found -->
+        <div id="detail-denied" class="hidden bg-white rounded-2xl ring-1 ring-slate-100 shadow-sm"></div>
+
+        <!-- Main content -->
+        <div id="detail-content" class="hidden space-y-5">
+
+          <a href="campaigns.html" class="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-indigo-600">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> กลับไปหน้า Campaigns
+          </a>
+
+          <!-- Header card -->
+          <div class="bg-white rounded-2xl ring-1 ring-slate-100 shadow-sm p-5 sm:p-6">
+            <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+              <div class="min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h1 id="detail-title" class="text-xl sm:text-2xl font-bold text-slate-800"></h1>
+                  <span id="detail-status-badge"></span>
+                </div>
+                <p id="detail-meta" class="text-sm text-slate-500 mt-1"></p>
+              </div>
+              <div id="detail-actions" class="flex flex-wrap items-center gap-2 shrink-0"></div>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-5 pt-5 border-t border-slate-100">
+              <div>
+                <p class="text-xs text-slate-400 mb-1">Lead ที่ค้นพบ</p>
+                <p id="detail-leads-found" class="text-lg font-bold text-slate-800"></p>
+              </div>
+              <div>
+                <p class="text-xs text-slate-400 mb-1">Lead เป้าหมาย</p>
+                <p id="detail-max-leads" class="text-lg font-bold text-slate-800"></p>
+              </div>
+              <div>
+                <p class="text-xs text-slate-400 mb-1">จังหวัด</p>
+                <p id="detail-province" class="text-lg font-bold text-slate-800"></p>
+              </div>
+              <div>
+                <p class="text-xs text-slate-400 mb-1">ประเภทธุรกิจ</p>
+                <p id="detail-business-type" class="text-lg font-bold text-slate-800"></p>
+              </div>
+            </div>
+            <div class="mt-4" id="detail-progress-wrap"></div>
+          </div>
+
+          <!-- Tabs -->
+          <div class="bg-white rounded-2xl ring-1 ring-slate-100 shadow-sm overflow-hidden">
+            <div class="flex items-center gap-1 px-3 sm:px-5 pt-3 border-b border-slate-100 overflow-x-auto" id="detail-tabs">
+              <button data-tab="overview" class="detail-tab whitespace-nowrap px-3 py-2.5 text-sm font-medium border-b-2 border-indigo-600 text-indigo-600">Overview</button>
+              <button data-tab="leads" class="detail-tab whitespace-nowrap px-3 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700">Leads</button>
+              <button data-tab="criteria" class="detail-tab whitespace-nowrap px-3 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700">Search Criteria</button>
+              <button data-tab="activity" class="detail-tab whitespace-nowrap px-3 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700">Activity Logs</button>
+            </div>
+
+            <div class="p-4 sm:p-6">
+              <section data-tab-panel="overview" class="tab-panel space-y-6"></section>
+              <section data-tab-panel="leads" class="tab-panel hidden space-y-4"></section>
+              <section data-tab-panel="criteria" class="tab-panel hidden"></section>
+              <section data-tab-panel="activity" class="tab-panel hidden"></section>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="assets/js/mock-data.js"></script>
+  <script src="assets/js/utils.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/permissions.js"></script>
+  <script src="assets/js/toast.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/sidebar.js"></script>
+  <script src="assets/js/topbar.js"></script>
+  <script src="assets/js/campaign-detail.js"></script>
+</body>
+</html>
