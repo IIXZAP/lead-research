@@ -15,11 +15,18 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
-    Route::get('/', DashboardController::class)->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::resource('campaigns', CampaignController::class);
     Route::post('/campaigns/{campaign}/start', [CampaignController::class, 'start'])->name('campaigns.start');
     Route::post('/campaigns/{campaign}/cancel', [CampaignController::class, 'cancel'])->name('campaigns.cancel');
+
+    // Leads Directory แบบรวมทุก Campaign (ui/leads.html) — ต้องอยู่ก่อน
+    // /leads/{lead} ด้านล่าง ไม่งั้น "export" จะถูกตีความเป็น {lead} id
+    Route::get('/leads', [LeadController::class, 'all'])->name('leads.all');
+    Route::get('/leads/export', [LeadController::class, 'exportAll'])
+        ->middleware('throttle:campaign-export')
+        ->name('leads.export-all');
 
     Route::get('/campaigns/{campaign}/leads', [LeadController::class, 'index'])->name('leads.index');
     Route::get('/campaigns/{campaign}/leads/export', [LeadController::class, 'export'])

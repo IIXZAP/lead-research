@@ -1,0 +1,10 @@
+node_modules
+apps/web/node_modules
+apps/web/vendor
+apps/web/storage/logs/*
+apps/web/storage/framework/cache/*
+apps/web/storage/framework/sessions/*
+apps/web/storage/framework/views/*
+.git
+apps/research-agent/__pycache__
+apps/research-agent/.venv
