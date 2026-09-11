@@ -74,6 +74,19 @@ services:
       retries: 10
     networks:
       - lead-platform
+  
+  phpmyadmin:
+    image: phpmyadmin
+    container_name: lead-platform-phpmyadmin
+    environment:
+      PMA_HOST: mysql          # ชี้ไป service ชื่อ mysql
+      PMA_PORT: 3306
+    ports:
+      - "8081:80"
+    depends_on:
+      - mysql
+    networks:
+      - lead-platform 
 
   redis:
     image: redis:7-alpine

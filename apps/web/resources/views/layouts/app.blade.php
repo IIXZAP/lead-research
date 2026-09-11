@@ -1,48 +1,89 @@
+@php
+  // หน้า child กำหนด active page ได้ 2 แบบ: ส่งตัวแปร $activePage หรือประกาศ @section('page', '...')
+  $activePage = $activePage ?? trim($__env->yieldContent('page', 'dashboard'));
+@endphp
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ config('app.name') }}</title>
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="csrf-token" content="{{ csrf_token() }}" />
+<title>@yield('title', 'Lead Campaign Dashboard') — Lead Campaign Dashboard</title>
+
+{{-- Tailwind Play CDN + config เดิมจาก Demo (ทุกหน้าใช้ config ก้อนเดียวกัน) --}}
+{{-- TODO(ขั้นถัดไป): ย้ายเข้า Vite + tailwind.config.js เมื่อ setup build pipeline --}}
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { darkMode: 'class', theme: { extend: {
+    fontFamily: { sans: ['Inter', 'Noto Sans Thai', 'sans-serif'] },
+    colors: { brand: { 50:'#eef2ff',100:'#e0e7ff',500:'#6366f1',600:'#4f46e5',700:'#4338ca' } }
+  } } };
+</script>
+
+{{-- ป้องกัน Dark mode กระพริบ: ใส่ class ก่อน render (พฤติกรรมเทียบเท่า applyStoredDarkMode เดิม) --}}
+<script>
+  if (localStorage.getItem('lcd_dark_mode') === '1') document.documentElement.classList.add('dark');
+</script>
+
+{{--
+  Fonts: Inter + Noto Sans Thai (weight ชุดเดียวกับที่ Demo ระบุใน app.css เดิมเป๊ะ)
+  ยกออกมาโหลดใน <head> โดยตรง แทนการพึ่ง @import ข้างใน app.css ซึ่งไม่เสถียร
+  (fetch ซ้อน + render-blocking) เป็นสาเหตุที่ฟอนต์ไม่โหลด → ตกไปใช้ฟอนต์ระบบที่ใหญ่กว่า
+  ทำให้ตัวอักษรใหญ่และระยะห่างบวมกว่า Demo
+--}}
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" />
+
+<link rel="stylesheet" href="{{ asset('assets/css/app.css') }}" />
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+{{-- สำหรับหน้าเฉพาะที่ต้องโหลด lib เพิ่ม เช่น dashboard push ApexCharts เข้ามาที่นี่ --}}
+@stack('head')
 </head>
-<body>
-    @auth
-    <nav class="sticky top-0 z-10 bg-surface/80 backdrop-blur-md border-b border-line">
-        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-            <div class="flex items-center gap-8">
-                <a href="{{ route('dashboard') }}" class="flex items-center gap-2 group">
-                    <span class="relative flex h-6 w-6 items-center justify-center rounded-md bg-brand text-white">
-                        <span class="absolute inline-flex h-full w-full rounded-md bg-brand/60 animate-pulse-ring"></span>
-                        <svg class="relative h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                    </span>
-                    <span class="font-display font-semibold tracking-tight">{{ config('app.name') }}</span>
-                </a>
-                <div class="flex items-center gap-6">
-                    <a href="{{ route('dashboard') }}" class="nav-link">Dashboard</a>
-                    <a href="{{ route('campaigns.index') }}" class="nav-link">Campaigns</a>
-                </div>
-            </div>
-            <div class="flex items-center gap-4 text-sm">
-                <span class="text-ink-muted">{{ auth()->user()->name }} <span class="text-line">·</span> <span class="font-mono text-xs uppercase tracking-wide">{{ auth()->user()->account_type->value }}</span></span>
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button type="submit" class="nav-link">Sign out</button>
-                </form>
-            </div>
-        </div>
-    </nav>
-    @endauth
+<body data-page="{{ $activePage ?? 'dashboard' }}" class="bg-slate-50 text-slate-800">
 
-    <main class="max-w-6xl mx-auto px-4 py-8 animate-fade-in-up">
-        @if (session('status'))
-            <div class="mb-4 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-                <svg class="h-4 w-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-                {{ session('status') }}
-            </div>
-        @endif
+  <div class="flex min-h-screen">
 
+    @include('partials.sidebar', ['activePage' => $activePage ?? 'dashboard'])
+
+    <div class="flex-1 min-w-0 flex flex-col">
+
+      @include('partials.topbar', ['activePage' => $activePage ?? 'dashboard'])
+
+      {{--
+        main-class ให้แต่ละหน้ากำหนดเองเพื่อคง layout เดิมเป๊ะ:
+        - dashboard:        space-y-6 max-w-[1600px]
+        - campaigns/leads:  space-y-5 max-w-[1600px]
+        - campaign-create:  max-w-4xl (ไม่มี space-y)
+        - business-info:    space-y-5 max-w-[1400px]
+      --}}
+      <main id="page-content" class="flex-1 p-4 sm:p-6 @yield('main-class', 'space-y-6 max-w-[1600px]') w-full mx-auto">
         @yield('content')
-    </main>
+      </main>
+
+      @include('partials.footer')
+    </div>
+  </div>
+
+  {{-- ฟอร์ม Logout กลาง: ปุ่มใน sidebar/topbar จะ submit ฟอร์มนี้ (คง DOM ของปุ่มเดิมไว้ทุกอย่าง) --}}
+  <form id="logout-form" method="POST" action="{{ Route::has('logout') ? route('logout') : '#' }}" class="hidden">
+    @csrf
+  </form>
+
+  {{-- Shared scripts — ลำดับเดิมตาม Demo (mock-data/auth/permissions ถูกถอดออก เพราะย้ายไปฝั่ง Server) --}}
+  <script src="{{ asset('assets/js/utils.js') }}"></script>
+  <script src="{{ asset('assets/js/toast.js') }}"></script>
+  <script src="{{ asset('assets/js/app.js') }}"></script>
+  <script src="{{ asset('assets/js/sidebar.js') }}"></script>
+  <script src="{{ asset('assets/js/topbar.js') }}"></script>
+
+  @stack('scripts')
+
+  <script>
+    // Demo เดิมเรียก lucide.createIcons() ภายใน render function ของแต่ละส่วน
+    // เมื่อ markup ย้ายมา render ฝั่ง Server จึงเรียกรวมครั้งเดียวที่นี่
+    if (window.lucide) lucide.createIcons();
+  </script>
 </body>
 </html>

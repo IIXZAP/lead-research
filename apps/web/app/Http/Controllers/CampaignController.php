@@ -29,23 +29,57 @@ class CampaignController extends Controller
 
     public function create(): View
     {
-        return view('campaigns.create');
+        return view('campaigns.create', [
+            'breadcrumbs' => [
+                ['label' => 'Campaigns', 'url' => route('campaigns.index')],
+                ['label' => 'สร้าง Campaign'],
+            ],
+        ]);
     }
 
     public function store(StoreCampaignRequest $request): RedirectResponse
     {
         $campaign = $this->campaigns->create($request->user(), $request->validated());
 
+        if ($request->boolean('start_immediately') && $request->user()->can('startJob', $campaign)) {
+            $this->campaigns->start($campaign);
+
+            return redirect()
+                ->route('campaigns.show', $campaign)
+                ->with('status', 'สร้างแคมเปญและเริ่มค้นหาแล้ว ระบบจะทยอยแสดงผลลัพธ์ที่นี่');
+        }
+
         return redirect()
             ->route('campaigns.show', $campaign)
-            ->with('status', 'สร้างแคมเปญเรียบร้อยแล้ว');
+            ->with('status', 'สร้างแคมเปญเรียบร้อยแล้ว (บันทึกเป็น Draft)');
     }
 
-    public function show(Campaign $campaign): View
+    public function show(Request $request, Campaign $campaign): View
     {
-        $campaign->load(['user', 'researchJobs' => fn ($query) => $query->latest()->limit(1)]);
+        // โหลด researchJobs ทั้งหมด (ไม่ limit 1 แบบเดิม) เพื่อใช้กับ Tab "Activity Logs"
+        // ของหน้า campaign-detail แบบเต็ม (Overview/Leads/Search Criteria/Activity Logs)
+        $campaign->load(['user', 'researchJobs' => fn($query) => $query->latest()]);
 
-        return view('campaigns.show', ['campaign' => $campaign]);
+        $leadsQuery = $campaign->leads();
+
+        $leadStats = [
+            'total' => (clone $leadsQuery)->count(),
+            'with_website' => (clone $leadsQuery)->whereNotNull('website_url')->count(),
+            'with_phone' => (clone $leadsQuery)->whereNotNull('phone')->count(),
+            'high_severity_issue_count' => (clone $leadsQuery)
+                ->whereHas('latestAudit', fn($q) => $q->where('audit_score', '<', 40))
+                ->count(),
+        ];
+
+        // Preview เฉพาะ 10 รายการล่าสุดสำหรับ Tab "Leads" ภายในหน้านี้
+        // ดูรายการทั้งหมดพร้อม filter/export ที่หน้า leads.index แยกต่างหาก
+        $leadsPreview = (clone $leadsQuery)->latest('discovered_at')->limit(10)->get();
+
+        return view('campaigns.show', [
+            'campaign' => $campaign,
+            'leadStats' => $leadStats,
+            'leadsPreview' => $leadsPreview,
+        ]);
     }
 
     public function edit(Campaign $campaign): View

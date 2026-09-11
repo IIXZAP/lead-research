@@ -20,6 +20,45 @@ class LeadController extends Controller
     {
     }
 
+    /**
+     * Leads Directory แบบรวมทุก Campaign (ui/leads.html) — ต่างจาก index()
+     * ด้านล่างซึ่งเป็น Leads ของ Campaign เดียว (ui/campaign-detail.html tab "Leads")
+     */
+    public function all(Request $request): View
+    {
+        $this->authorize('viewAny', Lead::class);
+
+        $filters = $this->filtersFromRequest($request);
+        $perPage = in_array((int) $request->query('per_page'), [10, 20, 50], true) ? (int) $request->query('per_page') : 20;
+
+        $leads = $this->leads->listAllFor($request->user(), $filters, $perPage);
+        $summary = $this->leads->summaryFor($request->user());
+        $filterOptions = $this->leads->filterOptionsFor($request->user());
+
+        // แนบคะแนน "ความสมบูรณ์" ต่อ record ไว้ล่วงหน้า กันไม่ให้ view ต้อง resolve
+        // service ซ้ำต่อแถว
+        $leads->getCollection()->each(function (Lead $lead) {
+            $lead->completeness = $this->leads->completenessScore($lead);
+        });
+
+        return view('leads.all', [
+            'leads' => $leads,
+            'filters' => $filters,
+            'statuses' => LeadStatus::cases(),
+            'summary' => $summary,
+            'perPage' => $perPage,
+            'provinceOptions' => $filterOptions['provinces'],
+            'businessTypeOptions' => $filterOptions['business_types'],
+        ]);
+    }
+
+    public function exportAll(Request $request): StreamedResponse
+    {
+        $this->authorize('viewAny', Lead::class);
+
+        return $this->leads->streamCsvAll($request->user(), $this->filtersFromRequest($request));
+    }
+
     public function index(Request $request, Campaign $campaign): View
     {
         $this->authorize('view', $campaign);
@@ -62,15 +101,29 @@ class LeadController extends Controller
 
     private function filtersFromRequest(Request $request): array
     {
-        $hasWebsite = $request->query('has_website');
-
         return array_filter([
             'status' => $request->query('status'),
-            'has_website' => $hasWebsite === null || $hasWebsite === '' ? null : (bool) (int) $hasWebsite,
+            'has_website' => $this->parseYesNo($request->query('has_website')),
+            'has_phone' => $this->parseYesNo($request->query('has_phone')),
             'min_score' => $request->query('min_score'),
             'max_score' => $request->query('max_score'),
             'province' => $request->query('province'),
+            'business_type' => $request->query('business_type'),
             'search' => $request->query('search'),
         ], fn ($value) => $value !== null && $value !== '');
+    }
+
+    /**
+     * ฟอร์มใน ui/leads.html ใช้ค่า "yes"/"no" ในทุก select ที่เป็น
+     * boolean filter (has_website, has_phone) แทน 1/0 — รองรับทั้งสองแบบ
+     * เผื่อ integration อื่นยังส่ง 1/0 มา (เช่นลิงก์ export จากหน้า campaign leads เดิม)
+     */
+    private function parseYesNo(?string $value): ?bool
+    {
+        return match ($value) {
+            'yes', '1' => true,
+            'no', '0' => false,
+            default => null,
+        };
     }
 }
