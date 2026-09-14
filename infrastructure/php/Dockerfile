@@ -26,6 +26,17 @@ RUN if [ -f composer.lock ]; then \
     composer dump-autoload --optimize --no-scripts; \
     fi
 COPY infrastructure/php/www.conf /usr/local/etc/php-fpm.d/www.conf
+
+# Git doesn't track empty directories, so storage/* and bootstrap/cache may
+# not exist at all in a fresh clone (no .gitkeep placeholders in this repo).
+# Create them before chown so the build doesn't fail on "No such file".
+RUN mkdir -p \
+    storage/framework/sessions \
+    storage/framework/views \
+    storage/framework/cache \
+    storage/framework/testing \
+    storage/logs \
+    bootstrap/cache
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
 COPY infrastructure/php/entrypoint.sh /usr/local/bin/entrypoint.sh
