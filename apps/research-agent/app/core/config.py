@@ -3,6 +3,7 @@
 Every module imports `settings` from here instead of reading os.environ
 directly, so there is exactly one place that knows about env var names.
 """
+
 from __future__ import annotations
 
 from functools import lru_cache
@@ -21,8 +22,14 @@ class Settings(BaseSettings):
     # Redis / Celery
     redis_host: str = Field(default="redis", alias="REDIS_HOST")
     redis_port: int = Field(default=6379, alias="REDIS_PORT")
+    redis_password: str = Field(default="", alias="REDIS_PASSWORD")
     celery_broker_db: int = Field(default=2, alias="CELERY_BROKER_DB")
     celery_result_db: int = Field(default=3, alias="CELERY_RESULT_DB")
+
+    @property
+    def redis_auth(self) -> str:
+        """Userinfo segment for a Redis URL — empty locally, ':password@' when set."""
+        return f":{self.redis_password}@" if self.redis_password else ""
 
     # Internal service-to-service auth (HMAC)
     internal_shared_secret: str = Field(default="", alias="INTERNAL_SHARED_SECRET")
@@ -65,11 +72,11 @@ class Settings(BaseSettings):
 
     @property
     def celery_broker_url(self) -> str:
-        return f"redis://{self.redis_host}:{self.redis_port}/{self.celery_broker_db}"
+        return f"redis://{self.redis_auth}{self.redis_host}:{self.redis_port}/{self.celery_broker_db}"
 
     @property
     def celery_result_backend(self) -> str:
-        return f"redis://{self.redis_host}:{self.redis_port}/{self.celery_result_db}"
+        return f"redis://{self.redis_auth}{self.redis_host}:{self.redis_port}/{self.celery_result_db}"
 
 
 @lru_cache
