@@ -28,8 +28,10 @@ class Settings(BaseSettings):
 
     @property
     def redis_auth(self) -> str:
-        """Userinfo segment for a Redis URL — empty locally, ':password@' when set."""
-        return f":{self.redis_password}@" if self.redis_password else ""
+        """Userinfo segment for a Redis URL — empty locally, 'default:password@'
+        when set, since this Redis instance uses ACL auth which requires an
+        explicit username, not just a password."""
+        return f"default:{self.redis_password}@" if self.redis_password else ""
 
     # Internal service-to-service auth (HMAC)
     internal_shared_secret: str = Field(default="", alias="INTERNAL_SHARED_SECRET")
