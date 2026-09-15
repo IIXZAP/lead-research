@@ -12,15 +12,19 @@ build_issue_summary), so nothing here duplicates logic.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Any
-
 from app.core.celery_app import celery_app
 from app.core.config import settings
 from app.core.logging import get_logger
+from app.core.redis_client import get_redis_client
 from app.schemas.business import BusinessResult, SearchCriteria
-from app.schemas.callback import CallbackError, CallbackLead, CallbackPayload, CallbackProgress
-from app.services.callback_client import CallbackClient, CallbackError as CallbackDeliveryError
+from app.schemas.callback import (
+    CallbackError,
+    CallbackLead,
+    CallbackPayload,
+    CallbackProgress,
+)
+from app.services.callback_client import CallbackClient
+from app.services.callback_client import CallbackError as CallbackDeliveryError
 from app.services.deduplicator import deduplicate
 from app.services.job_store import JobStore
 from app.tasks.audit_tasks import audit_website, build_issue_summary
@@ -31,10 +35,10 @@ logger = get_logger(__name__)
 CALLBACK_CHUNK_SIZE = 5
 
 
-def _redis_client():
-    import redis
+# def _redis_client():
+#     import redis
 
-    return redis.Redis(host=settings.redis_host, port=settings.redis_port, db=settings.celery_result_db)
+#     return redis.Redis(host=settings.redis_host, port=settings.redis_port, db=settings.celery_result_db)
 
 
 @celery_app.task(name="process_campaign", bind=True, max_retries=1, soft_time_limit=1800)
@@ -45,7 +49,7 @@ def process_campaign(
     criteria: dict,
     callback_url: str,
 ) -> dict:
-    job_store = JobStore(_redis_client())
+    job_store = JobStore(get_redis_client())
     callback_client = CallbackClient(shared_secret=settings.internal_shared_secret)
 
     job_store.set(
@@ -176,7 +180,7 @@ def process_campaign(
 
         return {"job_id": job_id, "status": final_status}
 
-    except Exception as exc:  # noqa: BLE001 - campaign-level failure still must notify Laravel
+    except Exception as exc:
         job_store.update(job_id, status="failed", current_stage="failed")
         logger.error("campaign processing failed", extra={"context": {"job_id": job_id, "error": str(exc)}})
 
